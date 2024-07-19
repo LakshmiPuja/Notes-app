@@ -2,13 +2,13 @@ const db  = require('../config/db');
 
 class Note{
 
-    static async create(userId,title,content,backgroundColor,tags,reminder,isArchive,isTrashed){
+    static async create(userId,title,content,backgroundColor,tags,reminder){
         const createdAt = new Date();
         const updatedAt = new Date();
         const tagStrings = tags.join(",");
         const[result] = await db.execute(
-            'INSERT INTO notes(user_id,title,content,background_color,tags,reminder,is_archived,is_trashed,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?)',
-            [userId,title,content,backgroundColor,tagStrings,reminder,isArchive,isTrashed,createdAt,updatedAt]);
+            'INSERT INTO notes(user_id,title,content,background_color,tags,reminder,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?)',
+            [userId,title,content,backgroundColor,tagStrings,reminder,createdAt,updatedAt]);
             return result.insertId;
     }
     static async findAll(userId){
@@ -17,7 +17,7 @@ class Note{
             return notes;
     }
 
-    static async update(noteId, title, content, backgroundColor, tags, reminder, isArchived, isTrashed) {
+    static async update(noteId, title, content, backgroundColor, tags, reminder) {
         const updatedAt = new Date();
         
         // Handle undefined values and replace with null
@@ -27,13 +27,11 @@ class Note{
             backgroundColor || null,
             tags || null, 
             reminder || null,
-            isArchived ,
-            isTrashed ,
             updatedAt
         ];
 
         const [result] = await db.execute(
-            'UPDATE notes SET title=?, content=?, background_color=?, tags=?, reminder=?, is_archived=?, is_trashed=?, updated_at=? WHERE id=?',
+            'UPDATE notes SET title=?, content=?, background_color=?, tags=?, reminder=?,updated_at=? WHERE id=?',
             [...params, noteId]
         );
 

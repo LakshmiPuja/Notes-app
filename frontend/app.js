@@ -4,9 +4,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const loginButton = document.getElementById('loginButton');
     const registerForm = document.getElementById('registerForm');
     const regButton = document.getElementById('regButton');
+    const allNotesButton = document.getElementById('allNotesButton');
+    const archivedNotesButton = document.getElementById('archivedNotesButton');
+    const trashedNotesButton = document.getElementById('trashedNotesButton');
 
-    if (loginForm) {
-        loginForm.addEventListener('submit', async (event) => {
+    if (loginButton) {
+        loginButton.addEventListener('submit', async (event) => {
             event.preventDefault();
             const username = document.getElementById('username').value;
             const password = document.getElementById('password').value;
@@ -17,9 +20,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     body: JSON.stringify({ username, password })
                 });
                 if (response.ok) {
-                    const { token } = await response.json();
+                    const { token, userId } = await response.json();
                     localStorage.setItem('token', token);
-                    console.log(token);
+                    localStorage.setItem('userId', userId); // Save user ID
+                    console.log(localStorage.getItem("token"));
                     window.location.href = 'note.html'; // Redirect to notes page
                 } else {
                     alert('Login failed. Please check your credentials.');
@@ -30,23 +34,18 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
-
+    
     if (registerButton) {
         registerButton.addEventListener('click', () => {
             window.location.href = 'register.html';
         });
     }
-    if (regButton) {
-        regButton.addEventListener('submit', () => {
-            window.location.href = 'note.html';
-        });
-    }
 
-    if (loginButton) {
-        loginButton.addEventListener('click', () => {
-            window.location.href = 'note.html';
-        });
-    }
+    // if (loginButton) {
+    //     loginButton.addEventListener('click', () => {
+    //         window.location.href = 'note.html';
+    //     });
+    // }
 
     if (registerForm) {
         registerForm.addEventListener('submit', async (event) => {
@@ -61,7 +60,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
                 if (response.ok) {
                     alert('Registration successful. Please login.');
-                    window.location.href = 'index.html'; // Redirect to login page
+                    window.location.href = 'login.html'; // Redirect to login page
                 } else {
                     alert('Registration failed. Please try again.');
                 }
@@ -73,8 +72,15 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const fetchNotes = async () => {
+        //console.log('Fetching notes with status:',);
+        const userId = localStorage.getItem('userId');
+        if (!userId) {
+            console.error('User ID not found');
+            return;
+        }
+        
         try {
-            const response = await fetch('http://localhost:3000/api/notes/getAll', {
+            const response = await fetch(`http://localhost:3000/api/notes/getAll`, {
                 method: 'GET',
                 headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
             });
@@ -110,14 +116,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
 
-    document.getElementById('create-note-form')?.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const title = document.getElementById('note-title').value;
-        const content = document.getElementById('note-content').value;
-        const backgroundColor = document.getElementById('note-color').value;
-        const tags = document.getElementById('note-tags').value.split(',');
-        const reminder = document.getElementById('note-reminder').value;
-
+    const createNote = async (noteData) => {
         try {
             const response = await fetch('http://localhost:3000/api/notes/addNote', {
                 method: 'POST',
@@ -125,19 +124,32 @@ document.addEventListener('DOMContentLoaded', () => {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${localStorage.getItem('token')}`
                 },
-                body: JSON.stringify({ title, content, backgroundColor, tags, reminder })
+                body: JSON.stringify(noteData)
             });
 
             if (response.ok) {
                 alert('Note created successfully');
-                fetchNotes();
+                //fetchNotes(); // Refresh notes
             } else {
-                throw new Error('Failed to create note');
+                const errorMessage = await response.text();
+                alert(`Failed to create note: ${errorMessage}`);
             }
         } catch (error) {
             console.error('Create note error:', error);
             alert('Error creating note. Please try again later.');
         }
+    };
+
+    document.getElementById('create-note-form')?.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const noteData = {
+            title: document.getElementById('note-title').value,
+            content: document.getElementById('note-content').value,
+            backgroundColor: document.getElementById('note-color').value,
+            tags: document.getElementById('note-tags').value.split(','),
+            reminder: document.getElementById('note-reminder').value
+        };
+        createNote(noteData);
     });
 
     const archiveNote = async (noteId) => {
@@ -149,7 +161,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (response.ok) {
                 alert('Note archived successfully');
-                fetchNotes();
+                //fetchNotes(); // Fetch notes after archiving
             } else {
                 throw new Error('Failed to archive note');
             }
@@ -168,15 +180,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (response.ok) {
                 alert('Note trashed successfully');
-                fetchNotes();
+                //fetchNotes(); // Fetch notes after trashing
             } else {
                 throw new Error('Failed to trash note');
             }
         } catch (error) {
-            console.error('Trash note error:', error);
-            alert('Error trashing note. Please try again later.');
+            console.error('Trash note error:',err);
         }
-    };
+    }
 
-    fetchNotes();
+    if (allNotesButton) {
+        allNotesButton.addEventListener('click', () => fetchNotes('all'));
+    }
+
+    if (archivedNotesButton) {
+        archivedNotesButton.addEventListener('click', () => archiveNote('archived'));
+    }
+
+    if (trashedNotesButton) {
+        trashedNotesButton.addEventListener('click', () => trashNote('trashed'));
+    }
 });
